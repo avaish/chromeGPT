@@ -1,8 +1,22 @@
 chrome.runtime.onConnect.addListener((port) => {
-    port.onMessage.addListener(function (query) {
-        console.log(`received query: ${query}`)
+    port.onMessage.addListener(function (msg) {
+        console.log(`received query: ${msg.query}`)
 
-        var raw = `{\n    \"action\": \"next\",\n    \"messages\": [\n        {\n            \"id\": \"014870d5-b37f-4ae6-94c6-397fd9e79f5d\",\n            \"role\": \"user\",\n            \"content\": {\n                \"content_type\": \"text\",\n                \"parts\": [\n                    \"${query}\"\n                ]\n            }\n        }\n    ],\n    \"conversation_id\": \"0be8529f-2975-4ade-8e8d-a5e1a99e8e23\",\n    \"parent_message_id\": \"709ed8f8-7af0-4fb7-bd3b-16ae97ff12a4\",\n    \"model\": \"text-davinci-002-render\"\n}`;
+        let body = {
+            action: 'next',
+            messages: [
+                {
+                    id: crypto.randomUUID(),
+                    role: 'user',
+                    content: {
+                        content_type: 'text',
+                        parts: [msg.query],
+                    },
+                },
+            ],
+            parent_message_id: crypto.randomUUID(),
+            model: 'text-davinci-002-render',
+        }
 
         fetch("https://chat.openai.com/backend-api/conversation", {
             method: 'POST',
@@ -11,14 +25,26 @@ chrome.runtime.onConnect.addListener((port) => {
                 "content-type": "application/json",
                 "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
             },
-            body: raw,
+            body: JSON.stringify(body),
             redirect: 'follow'
         })
-            .then(response => response.text())
-            .then(result => console.log(result))
+            .then((response) => response.body)
+            .then((body) => {
+                const reader = body.getReader();
+                reader.read()
+                    .then(function processText({ done, value }) {
+                        if (!done) {
+                            const data = new TextDecoder().decode(value);
+                            console.log(data);
+                            if (data != "data: [DONE]") {
+                                console.log(JSON.parse(data.substring(6)).message.content.parts[0]);
+                            }
+                        }
+                        reader.read().then(processText);
+                    })
+            })
             .catch(error => console.log('error', error));
 
-
-        port.postMessage({ response: `response: ${query}` });
+        port.postMessage({ response: `response: ${msg.query}` });
     });
 });
