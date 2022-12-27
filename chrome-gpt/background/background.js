@@ -1,6 +1,10 @@
 chrome.runtime.onConnect.addListener((port) => {
-    port.onMessage.addListener(function (msg) {
+    port.onMessage.addListener(async function (msg) {
         console.log(`received query: ${msg.query}`)
+
+        // TODO: cache token
+        const resp = await fetch('https://chat.openai.com/api/auth/session');
+        const accessToken = (await resp.json()).accessToken;
 
         let body = {
             action: 'next',
@@ -21,7 +25,7 @@ chrome.runtime.onConnect.addListener((port) => {
         fetch("https://chat.openai.com/backend-api/conversation", {
             method: 'POST',
             headers: {
-                "authorization": "Bearer ", // insert token
+                "authorization": `Bearer ${accessToken}`,
                 "content-type": "application/json",
                 "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
             },
