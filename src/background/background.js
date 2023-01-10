@@ -1,3 +1,5 @@
+import { createParser } from 'eventsource-parser'
+
 chrome.runtime.onConnect.addListener((port) => {
     port.onMessage.addListener(async function (msg) {
         console.log(`received query: ${msg.query}`)
@@ -22,6 +24,15 @@ chrome.runtime.onConnect.addListener((port) => {
             model: 'text-davinci-002-render',
         }
 
+        const parser = createParser((event) => {
+            if (event.type === 'event') {
+                if (event.data != "[DONE]") {
+                    const resp = JSON.parse(event.data);
+                    port.postMessage({ response: resp.message?.content?.parts?.[0] });
+                }
+            }
+          })
+        
         fetch("https://chat.openai.com/backend-api/conversation", {
             method: 'POST',
             headers: {
@@ -29,8 +40,7 @@ chrome.runtime.onConnect.addListener((port) => {
                 "content-type": "application/json",
                 "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
             },
-            body: JSON.stringify(body),
-            redirect: 'follow'
+            body: JSON.stringify(body)
         })
             .then((response) => response.body)
             .then((body) => {
@@ -38,11 +48,8 @@ chrome.runtime.onConnect.addListener((port) => {
                 reader.read()
                     .then(function processText({ done, value }) {
                         if (!done) {
-                            const data = new TextDecoder().decode(value);
-                            console.log(data);
-                            if (data != "data: [DONE]") {
-                                console.log(JSON.parse(data.substring(6)).message.content.parts[0]);
-                            }
+                            const chunk = new TextDecoder().decode(value);
+                            parser.feed(chunk)
                         }
                         reader.read().then(processText);
                     })

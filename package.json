@@ -1,0 +1,25 @@
+{
+  "name": "chromegpt",
+  "version": "1.0.0",
+  "description": "Chrome extension for showing chatGPT results in Google",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avaish/chromeGPT.git"
+  },
+  "scripts": {
+    "build": "cp -R src/ build/ && esbuild src/background/background.js src/scripts/content.js --bundle --outdir=build --outbase=src"
+  },
+  "author": "Atharv Vaish",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/avaish/chromeGPT/issues"
+  },
+  "homepage": "https://github.com/avaish/chromeGPT#readme",
+  "devDependencies": {
+    "esbuild": "^0.16.11"
+  },
+  "dependencies": {
+    "eventsource-parser": "^0.0.5"
+  }
+}
